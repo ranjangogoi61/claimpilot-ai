@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClaimPilot AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f4f0; --surface:#ffffff; --ink:#16181d; --muted:#5d6370; --line:#e3e1da;
+  --accent:#1f4fd8; --accent-ink:#ffffff; --ok:#147a4b; --ok-bg:#e5f4ec;
+  --warn:#9a5b00; --warn-bg:#fdf1dc; --bad:#b4232c; --bad-bg:#fbe7e8; --chip:#eef0f5;
+  --radius:14px; --shadow:0 1px 2px rgba(20,22,30,.06),0 4px 16px rgba(20,22,30,.05);
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f1115; --surface:#171a21; --ink:#eceef3; --muted:#9aa1ae; --line:#2a2f3a;
+  --accent:#6f95ff; --accent-ink:#0f1115; --ok:#5fd39b; --ok-bg:#163326;
+  --warn:#f2b45a; --warn-bg:#3a2a12; --bad:#ff7d84; --bad-bg:#3d1a1d; --chip:#232835;
+  --shadow:none;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+header.top{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+.bar{display:flex;align-items:center;justify-content:space-between;height:56px;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em;text-decoration:none;color:var(--ink)}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font-size:14px}
+.status-dots{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.dot{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.dot i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.on i{background:var(--ok)} .dot.off i{background:var(--bad)}
+.banner{margin:12px 0 0;padding:10px 14px;border-radius:10px;font-size:13px;background:var(--warn-bg);color:var(--warn)}
+main{padding:20px 0 64px}
+h1{font-size:24px;letter-spacing:-.02em;margin:4px 0 4px}
+h2{font-size:15px;margin:0 0 12px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.step{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--chip);font-size:12px;font-weight:600;margin-right:8px}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);text-decoration:none;color:inherit;box-shadow:var(--shadow)}
+.row:hover{border-color:var(--accent)}
+.row .id{font-size:13px;color:var(--muted)}
+.row .reason{font-weight:600}
+.amount{font-weight:700;font-size:17px;text-align:right}
+.chips{display:flex;gap:6px;flex-wrap:wrap;grid-column:1/-1}
+.chip{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--chip);color:var(--muted);white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok)} .chip.warn{background:var(--warn-bg);color:var(--warn)} .chip.bad{background:var(--bad-bg);color:var(--bad)}
+.chip.accent{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;font-size:14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;word-break:break-word}
+.quote{border-left:3px solid var(--line);padding:6px 12px;margin:10px 0;color:var(--ink);background:var(--bg);border-radius:0 8px 8px 0}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{min-height:130px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:11px 16px;cursor:pointer;background:var(--chip);color:var(--ink)}
+button.primary{background:var(--accent);color:var(--accent-ink)}
+button.danger{background:var(--bad-bg);color:var(--bad)}
+button:disabled{opacity:.5;cursor:not-allowed}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--ink);margin-top:12px}
+.check input{width:auto;margin-top:3px}
+.evrow{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--line);align-items:start}
+.evrow:first-child{border-top:0}
+.reco{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:10px;background:var(--bg);margin:12px 0}
+.reco b{font-size:16px}
+.flags li{color:var(--warn);margin:4px 0}
+.facts li{margin:4px 0}
+pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-size:12.5px;margin:8px 0 0}
+.audit li{font-size:13px;margin:6px 0;color:var(--muted)} .audit b{color:var(--ink);font-weight:600}
+.muted{color:var(--muted)} .small{font-size:13px}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:14px;margin-bottom:8px}
+.result{padding:14px;border-radius:10px;margin-top:14px}
+.result.ok{background:var(--ok-bg);color:var(--ok)} .result.bad{background:var(--bad-bg);color:var(--bad)}
+.empty{text-align:center;padding:40px 16px;color:var(--muted)}
+.deadline{font-weight:700}
+details summary{cursor:pointer;font-weight:600}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (max-width:560px){.kv{grid-template-columns:1fr}.kv dt{margin-top:6px}.grid2{grid-template-columns:1fr}h1{font-size:21px}.status-dots .dot span{display:none}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="bar">
+    <a class="brand" href="#/"><span class="logo">CP</span>ClaimPilot AI</a>
+    <div class="status-dots" id="dots"></div>
+  </div>
+</div></header>
+<div class="wrap" id="bannerWrap"></div>
+<main class="wrap" id="app"><div class="empty"><span class="spinner"></span>Loading…</div></main>
+
+<script>
+const $ = (s, el=document) => el.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const REASONS = {
+  MERCHANDISE_OR_SERVICE_NOT_RECEIVED: "Item not received",
+  MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED: "Not as described",
+  UNAUTHORISED: "Unauthorised transaction", CREDIT_NOT_PROCESSED: "Credit not processed",
+  DUPLICATE_TRANSACTION: "Duplicate transaction", INCORRECT_AMOUNT: "Incorrect amount",
+  PAYMENT_BY_OTHER_MEANS: "Paid by other means", CANCELED_RECURRING_BILLING: "Cancelled recurring billing",
+  PROBLEM_WITH_REMITTANCE: "Problem with remittance", OTHER: "Other"
+};
+const reasonText = r => REASONS[r] || (r || "Dispute").replaceAll("_"," ").toLowerCase();
+const statusChip = s => {
+  const map = {WAITING_FOR_SELLER_RESPONSE:["Your response needed","bad"],UNDER_REVIEW:["Under PayPal review","accent"],
+    WAITING_FOR_BUYER_RESPONSE:["Waiting for buyer",""],OPEN:["Open",""],RESOLVED:["Resolved","ok"]};
+  const [t,c] = map[s] || [s||"Unknown",""]; return `<span class="chip ${c}">${esc(t)}</span>`;
+};
+const money = a => a ? `${esc(a.value)} ${esc(a.currency_code)}` : "—";
+function dueInfo(iso, status){
+  if(status === "RESOLVED") return {text:"Closed", cls:""};
+  if(!iso) return {text:"No deadline listed", cls:""};
+  const ms = new Date(iso) - new Date(); const h = Math.round(ms/36e5);
+  if(ms < 0) return {text:"Deadline passed", cls:"bad"};
+  const txt = h < 48 ? `${h}h left` : `${Math.round(h/24)} days left`;
+  return {text: txt, cls: h < 48 ? "bad" : h < 120 ? "warn" : "ok"};
+}
+const fmtDate = iso => iso ? new Date(iso).toLocaleString([], {dateStyle:"medium", timeStyle:"short"}) : "—";
+
+async function api(path, opts={}){
+  const res = await fetch(path, {headers:{"Content-Type":"application/json"}, ...opts});
+  let body = null; try { body = await res.json(); } catch {}
+  if(!res.ok){
+    const p = body && body.paypal;
+    const msg = p ? `PayPal ${p.http_status}: ${p.name || ""} ${p.message || ""}${p.debug_id ? " (debug_id "+p.debug_id+")" : ""}`
+                  : (body && (body.detail || body.error)) || `HTTP ${res.status}`;
+    const err = new Error(typeof msg === "string" ? msg : JSON.stringify(msg)); err.body = body; throw err;
+  }
+  return body;
+}
+
+let HEALTH = null;
+async function loadHealth(){
+  try { HEALTH = await api("/api/health"); } catch(e){ HEALTH = {error: e.message}; }
+  const pp = HEALTH.paypal_connection && HEALTH.paypal_connection.ok;
+  $("#dots").innerHTML = `
+    <span class="dot ${pp ? "on":"off"}"><i></i><span>PayPal ${esc(HEALTH.paypal_mode || "")}</span></span>
+    <span class="dot ${HEALTH.ai_configured ? "on":"off"}"><i></i><span>${HEALTH.ai_configured ? "Gemini AI" : "AI off (rules)"}</span></span>`;
+  let b = "";
+  if(HEALTH.paypal_mode === "MOCK") b += `<div class="banner"><b>MOCK DATA.</b> Local test mode — not connected to PayPal.</div>`;
+  else b += `<div class="banner" style="background:var(--chip);color:var(--muted)">PayPal <b>sandbox</b> prototype · no real money moves · every submission needs a human approval</div>`;
+  if(!HEALTH.paypal_configured) b += `<div class="banner">PayPal credentials are not set. Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET.</div>`;
+  else if(HEALTH.paypal_connection && !HEALTH.paypal_connection.ok) b += `<div class="banner">PayPal connection failed: ${esc(HEALTH.paypal_connection.message || HEALTH.paypal_connection.name || "")}</div>`;
+  $("#bannerWrap").innerHTML = b;
+}
+
+/* ---------------- Screen 1: dispute queue ---------------- */
+async function renderList(){
+  const app = $("#app");
+  app.innerHTML = `<h1>Dispute queue</h1><p class="sub">Sorted by what needs you first, then by PayPal's response deadline.</p>
+    <div class="list" id="list"><div class="empty"><span class="spinner"></span>Fetching disputes from PayPal…</div></div>
+    <div class="actions"><button onclick="renderList()">Refresh</button></div>`;
+  try{
+    const data = await api("/api/disputes");
+    if(!data.items.length){
+      $("#list").innerHTML = `<div class="card empty">No disputes on this PayPal account yet.<br><span class="small">In sandbox: log in as the buyer at sandbox.paypal.com, pay the business account, then report "Item not received". Disputes can take a minute to appear.</span></div>`;
+      return;
+    }
+    $("#list").innerHTML = data.items.map(d => {
+      const due = dueInfo(d.seller_response_due_date, d.status);
+      const cp = {SUBMITTED:["Evidence submitted","ok"],ANALYZED:["AI draft ready","accent"],NEW:["Not reviewed",""]}[d.claimpilot_state];
+      return `<a class="row" href="#/case/${encodeURIComponent(d.dispute_id)}">
+        <div><div class="reason">${esc(reasonText(d.reason))}</div><div class="id mono">${esc(d.dispute_id)}</div></div>
+        <div class="amount">${money(d.dispute_amount)}</div>
+        <div class="chips">${statusChip(d.status)}<span class="chip ${due.cls}">⏱ ${esc(due.text)}</span>
+          ${d.dispute_life_cycle_stage ? `<span class="chip">${esc(d.dispute_life_cycle_stage)}</span>` : ""}
+          <span class="chip ${cp[1]}">${cp[0]}</span></div></a>`;
+    }).join("");
+  }catch(e){
+    $("#list").innerHTML = `<div class="card result bad">${esc(e.message)}</div>`;
+  }
+}
+
+/* ---------------- Screen 2: case page ---------------- */
+let CASE = null;
+async function renderCase(id){
+  const app = $("#app");
+  app.innerHTML = `<div class="empty"><span class="spinner"></span>Loading case…</div>`;
+  try { CASE = await api(`/api/disputes/${encodeURIComponent(id)}`); }
+  catch(e){ app.innerHTML = `<a class="back" href="#/">← Queue</a><div class="card result bad">${esc(e.message)}</div>`; return; }
+  const d = CASE.dispute, due = dueInfo(d.seller_response_due_date, d.status);
+  const tx = (d.disputed_transactions || [])[0] || {};
+  const msgs = d.messages || [];
+  const requested = (d.evidences || []).filter(e => e.source === "REQUESTED_FROM_SELLER");
+  const submitted = (d.evidences || []).filter(e => e.source && e.source !== "REQUESTED_FROM_SELLER");
+  const r = CASE.record || {};
+  const acts = CASE.actions || [];
+
+  app.innerHTML = `
+  <a class="back" href="#/">← Queue</a>
+  <h1>${esc(reasonText(d.reason))} · ${money(d.dispute_amount)}</h1>
+  <div class="chips" style="margin:6px 0 18px">${statusChip(d.status)}
+    <span class="chip ${due.cls} deadline">⏱ ${esc(due.text)}</span>
+    <span class="chip">${esc(d.dispute_life_cycle_stage || "")}</span>
+    <span class="chip mono">${esc(d.dispute_id)}</span></div>
+
+  <section class="card"><h2><span class="step">1</span>What PayPal says</h2>
+    <dl class="kv">
+      <dt>Respond by</dt><dd>${esc(fmtDate(d.seller_response_due_date))}</dd>
+      <dt>Opened</dt><dd>${esc(fmtDate(d.create_time))}</dd>
+      <dt>Transaction</dt><dd class="mono">${esc(tx.seller_transaction_id || "—")}</dd>
+      <dt>Paid</dt><dd>${money(tx.gross_amount)} ${tx.create_time ? "on " + esc(fmtDate(tx.create_time)) : ""}</dd>
+      <dt>PayPal requests</dt><dd>${requested.length ? requested.map(e => `<span class="chip warn mono">${esc(e.evidence_type)}</span>`).join(" ") : '<span class="muted">No specific evidence requested yet</span>'}</dd>
+      <dt>Allowed actions</dt><dd class="small mono">${esc(acts.filter(a => a !== "self").join(", ") || "—")}</dd>
+    </dl>
+    ${msgs.length ? msgs.map(m => `<div class="quote"><div class="small muted">${esc(m.posted_by || "")} · ${esc(fmtDate(m.time_posted))}</div>${esc(m.content)}</div>`).join("") : '<p class="small muted">No messages from the buyer.</p>'}
+    ${submitted.length ? `<details style="margin-top:10px"><summary class="small">Evidence already on the case (${submitted.length})</summary><pre>${esc(JSON.stringify(submitted, null, 2))}</pre></details>` : ""}
+  </section>
+
+  <section class="card"><h2><span class="step">2</span>Your shipment record</h2>
+    <p class="small muted" style="margin-top:-6px">ClaimPilot only uses what you enter here and what PayPal returns. It never invents tracking data.</p>
+    <div class="grid2">
+      <div><label>Carrier</label><input id="f_carrier" value="${esc(r.carrier)}" placeholder="e.g. FEDEX, UPS, INDIA_POST"></div>
+      <div><label>Tracking number</label><input id="f_tracking" class="mono" value="${esc(r.tracking_number)}" placeholder="from your shipping label"></div>
+      <div><label>Ship date</label><input id="f_ship" type="date" value="${esc(r.ship_date)}"></div>
+      <div><label>Delivery status</label><select id="f_status">
+        ${["","Delivered","In transit","Shipped","Unknown"].map(s => `<option ${s===r.delivery_status?"selected":""}>${s}</option>`).join("")}</select></div>
+      <div><label>Your order reference</label><input id="f_order" value="${esc(r.order_ref)}"></div>
+      <div><label>Other notes (optional)</label><input id="f_notes" value="${esc(r.notes)}" placeholder="e.g. signed for at door"></div>
+    </div>
+    <div class="actions"><button id="saveRec">Save record</button><span id="recMsg" class="small muted" style="align-self:center"></span></div>
+  </section>
+
+  <section class="card"><h2><span class="step">3</span>AI evidence analysis</h2>
+    <div id="analysis">${CASE.analysis ? "" : '<p class="small muted">Save your record, then let ClaimPilot map PayPal\'s request to your evidence.</p>'}</div>
+    <div class="actions"><button class="primary" id="runAi">${CASE.analysis ? "Re-analyze" : "Analyze with AI"}</button></div>
+  </section>
+
+  <section class="card"><h2><span class="step">4</span>Approve &amp; submit to PayPal</h2>
+    <div id="submitArea"></div>
+  </section>
+
+  <section class="card"><details ${acts.includes("adjudicate") || acts.includes("require_evidence") ? "open" : ""}>
+    <summary>Sandbox controls <span class="chip warn">simulation</span></summary>
+    <p class="small muted">PayPal's sandbox-only endpoints stand in for a PayPal agent so the full lifecycle can be shown. They do not exist in live mode.</p>
+    <div class="actions">
+      <button id="sbReq" ${acts.includes("require_evidence") ? "" : "disabled"}>Request seller evidence</button>
+      <button id="sbWin" ${acts.includes("adjudicate") ? "" : "disabled"}>Settle: seller's favour</button>
+      <button id="sbLose" class="danger" ${acts.includes("adjudicate") ? "" : "disabled"}>Settle: buyer's favour</button>
+    </div><div id="sbMsg" class="small" style="margin-top:8px"></div>
+    ${d.dispute_outcome ? `<pre>${esc(JSON.stringify(d.dispute_outcome, null, 2))}</pre>` : ""}
+  </details></section>
+
+  <section class="card"><h2>Audit trail</h2><ul class="audit" style="padding-left:18px;margin:0">
+    ${(CASE.audit || []).map(a => `<li><b>${esc(a.action)}</b> · ${esc(a.actor)} · ${esc(fmtDate(a.ts))}</li>`).join("") || '<li>No actions yet.</li>'}
+  </ul></section>`;
+
+  if(CASE.analysis) showAnalysis(CASE.analysis);
+  renderSubmit();
+  $("#saveRec").onclick = saveRecord;
+  $("#runAi").onclick = runAnalysis;
+  $("#sbReq").onclick = () => sandbox("require-evidence");
+  $("#sbWin").onclick = () => sandbox("adjudicate", "SELLER_FAVOR");
+  $("#sbLose").onclick = () => sandbox("adjudicate", "BUYER_FAVOR");
+}
+
+function readRecord(){
+  return {carrier:$("#f_carrier").value, tracking_number:$("#f_tracking").value, ship_date:$("#f_ship").value,
+          delivery_status:$("#f_status").value, order_ref:$("#f_order").value, notes:$("#f_notes").value};
+}
+async function saveRecord(){
+  const id = CASE.dispute.dispute_id;
+  try{ const r = await api(`/api/disputes/${encodeURIComponent(id)}/record`, {method:"PUT", body:JSON.stringify(readRecord())});
+       CASE.record = r.record; $("#recMsg").textContent = "Saved."; }
+  catch(e){ $("#recMsg").textContent = e.message; }
+}
+async function runAnalysis(){
+  await saveRecord();
+  const btn = $("#runAi"); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Analyzing…';
+  try{ CASE.analysis = await api(`/api/disputes/${encodeURIComponent(CASE.dispute.dispute_id)}/analyze`, {method:"POST"});
+       showAnalysis(CASE.analysis); renderSubmit(); btn.textContent = "Re-analyze"; }
+  catch(e){ $("#analysis").innerHTML = `<div class="result bad">${esc(e.message)}</div>`; btn.textContent = "Analyze with AI"; }
+  btn.disabled = false;
+}
+function showAnalysis(a){
+  const icon = s => s === "AVAILABLE" ? '<span class="chip ok">Available</span>' : s === "MISSING" ? '<span class="chip bad">Missing</span>' : '<span class="chip warn">Review</span>';
+  const recoText = {PROVIDE_EVIDENCE:"Provide evidence",MAKE_OFFER:"Make an offer",ACCEPT_CLAIM:"Accept the claim",GATHER_MORE:"Gather more evidence first"}[a.recommendation] || a.recommendation;
+  $("#analysis").innerHTML = `
+    <div class="chips" style="margin-bottom:10px"><span class="chip ${a.engine==="AI"?"accent":"warn"}">${a.engine==="AI" ? "Gemini · "+esc(a.model||"") : "Rule-based (AI unavailable)"}</span>
+      <span class="chip">Confidence: ${esc(a.confidence || "—")}</span><span class="chip">${esc(fmtDate(a.analyzed_at))}</span></div>
+    ${a.ai_error ? `<p class="small muted">AI call failed, rules used instead: ${esc(a.ai_error)}</p>` : ""}
+    <p>${esc(a.case_summary)}</p>
+    <div class="reco"><div><div class="small muted">Recommendation</div><b>${esc(recoText)}</b></div></div>
+    <p class="small">${esc(a.rationale)}</p>
+    <h2 style="margin-top:16px">Evidence checklist</h2>
+    <div>${(a.requested_evidence || []).map(e => `<div class="evrow">${icon(e.status)}<div><b class="mono small">${esc(e.evidence_type)}</b><div class="small muted">${esc(e.matched_record ? "Matched: " + e.matched_record + " · " : "")}${esc(e.note)}</div></div></div>`).join("") || '<p class="small muted">No evidence types listed.</p>'}</div>
+    ${(a.risk_flags||[]).length ? `<h2 style="margin-top:16px">Flags</h2><ul class="flags">${a.risk_flags.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
+    ${(a.facts_used||[]).length ? `<details style="margin-top:10px"><summary class="small">Facts the AI used (${a.facts_used.length})</summary><ul class="facts small">${a.facts_used.map(f => `<li><span class="chip">${esc(f.source)}</span> ${esc(f.fact)}</li>`).join("")}</ul></details>` : ""}`;
+}
+function renderSubmit(){
+  const a = CASE.analysis, s = CASE.submission;
+  const area = $("#submitArea");
+  if(!a){ area.innerHTML = '<p class="small muted">Run the analysis first. Nothing is sent to PayPal until you approve it here.</p>'; return; }
+  area.innerHTML = `
+    <label>Note to PayPal (edit freely — this is what gets submitted)</label>
+    <textarea id="note">${esc(a.draft_note || "")}</textarea>
+    <details style="margin-top:10px"><summary class="small">Exact evidence payload</summary><pre id="payload"></pre></details>
+    <div class="grid2"><div><label>Approved by</label><input id="approver" placeholder="Your name"></div></div>
+    <label class="check"><input type="checkbox" id="attachTr" checked> Also attach the tracking number to the PayPal transaction (Add Tracking API)</label>
+    <label class="check"><input type="checkbox" id="confirm"> I have checked this evidence and confirm it is accurate.</label>
+    <div class="actions"><button class="primary" id="submitBtn">Approve &amp; submit to PayPal</button></div>
+    <div id="submitMsg">${s ? submitResult(s) : ""}</div>`;
+  const updatePayload = () => {
+    const ev = JSON.parse(JSON.stringify(a.evidence_preview || {})); ev.notes = $("#note").value;
+    $("#payload").textContent = JSON.stringify({evidences:[ev]}, null, 2);
+  };
+  $("#note").oninput = updatePayload; updatePayload();
+  $("#submitBtn").onclick = submitEvidence;
+}
+function submitResult(s){
+  return `<div class="result ok"><b>${s.duplicate ? "Already submitted — duplicate blocked." : "Evidence submitted to PayPal."}</b><br>
+    <span class="small">Approved by ${esc(s.approver)} · ${esc(fmtDate(s.submitted_at))}<br>
+    PayPal status now: <b>${esc(s.status_after)}</b> (${esc(s.stage_after || "")})<br>
+    Request ID <span class="mono">${esc(s.request_id)}</span></span>
+    ${(s.warnings||[]).map(w => `<div class="small">⚠ ${esc(w)}</div>`).join("")}</div>`;
+}
+async function submitEvidence(){
+  const btn = $("#submitBtn"); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Submitting…';
+  try{
+    const s = await api(`/api/disputes/${encodeURIComponent(CASE.dispute.dispute_id)}/submit`, {method:"POST",
+      body: JSON.stringify({note:$("#note").value, approver:$("#approver").value, confirm:$("#confirm").checked, attach_tracking:$("#attachTr").checked})});
+    $("#submitMsg").innerHTML = submitResult(s);
+    setTimeout(() => renderCase(CASE.dispute.dispute_id), 1800);
+  }catch(e){ $("#submitMsg").innerHTML = `<div class="result bad">${esc(e.message)}</div>`; }
+  btn.disabled = false; btn.textContent = "Approve & submit to PayPal";
+}
+async function sandbox(kind, outcome){
+  const id = CASE.dispute.dispute_id;
+  $("#sbMsg").innerHTML = '<span class="spinner"></span>Calling PayPal sandbox…';
+  try{
+    await api(`/api/disputes/${encodeURIComponent(id)}/sandbox/${kind}`, {method:"POST", body: JSON.stringify(outcome ? {outcome} : {})});
+    $("#sbMsg").textContent = "Done. Reloading case…"; setTimeout(() => renderCase(id), 1200);
+  }catch(e){ $("#sbMsg").innerHTML = `<span style="color:var(--bad)">${esc(e.message)}</span>`; }
+}
+
+function route(){
+  const h = location.hash || "#/";
+  const m = h.match(/^#\/case\/(.+)$/);
+  if(m) renderCase(decodeURIComponent(m[1])); else renderList();
+  window.scrollTo(0,0);
+}
+window.addEventListener("hashchange", route);
+loadHealth().then(route);
+</script>
+</body>
+</html>

@@ -7,9 +7,9 @@ ClaimPilot reads a PayPal dispute, maps PayPal's requested evidence to the merch
 
 ## The problem
 
-When a buyer opens an *Item Not Received* case, a small seller usually has about 10 days to answer. If they don't respond, the case is decided in the buyer's favour. The evidence often exists already (a carrier and tracking number), but it lives outside PayPal and must be matched to what PayPal is asking for.
+When a buyer opens an *Item Not Received* case, PayPal sets a `seller_response_due_date`. PayPal's own guide says to respond by that date to stop the dispute from automatically closing in the buyer's favour. The number of days varies with the stage and escalation. The evidence often exists already (a carrier and tracking number), but it lives outside PayPal and must be matched to what PayPal is asking for.
 
-PayPal's own Agent Toolkit lets an AI agent **list, read and accept** disputes, but it has **no tool to provide evidence, make an offer or appeal**. The Disputes API supports all of these. An agent built on the toolkit can concede a case, but it cannot defend one.
+PayPal's Disputes API fully supports defending a case (`provide-evidence`, offers, appeals). But PayPal's Agent Toolkit, the layer AI agents use, exposes only **list, get and accept-claim** for disputes. An agent built on the toolkit can concede a case, but it cannot defend one. ClaimPilot's innovation is **AI evidence preparation plus safe, human-approved orchestration of the existing Disputes API.**
 
 ClaimPilot fills that gap, safely.
 

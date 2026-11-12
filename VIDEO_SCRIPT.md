@@ -4,7 +4,7 @@ Record the phone screen with the built-in screen recorder, then trim it in CapCu
 
 | Time | Screen | Say |
 |---|---|---|
-| 0:00–0:20 | App header / queue | "A buyer says their parcel never arrived. The seller has about ten days to answer PayPal, or the buyer wins by default. The proof usually exists — a tracking number — but it sits outside PayPal. And PayPal's own Agent Toolkit can let an AI *accept* a dispute, but not *defend* one." |
+| 0:00–0:20 | App header / queue | "A buyer says their parcel never arrived. PayPal sets a response deadline, and if the seller misses it the case can close in the buyer's favour. The proof usually exists — a tracking number — but it sits outside PayPal. And PayPal's Disputes API can defend a case, but PayPal's Agent Toolkit only lets an AI *accept* one, not *defend* it." |
 | 0:20–0:35 | Queue sorted by deadline | "ClaimPilot AI is a dispute defense copilot. It pulls disputes live from the PayPal Disputes API and puts the ones that need me first, sorted by PayPal's response deadline." |
 | 0:35–1:00 | Open the case: section 1 | "Here is a real sandbox Item Not Received case. ClaimPilot shows what PayPal says: the reason, the buyer's message, the deadline, and exactly which evidence PayPal requested — proof of fulfillment." |
 | 1:00–1:15 | Section 2: type carrier and tracking | "I add my shipment record: carrier and tracking number. The AI only works from this and from PayPal's data." |

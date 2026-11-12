@@ -79,6 +79,10 @@ pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding
 details summary{cursor:pointer;font-weight:600}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes spin{to{transform:rotate(360deg)}}
+.tabs{display:flex;gap:4px;border-top:1px solid var(--line);overflow-x:auto}
+.tabs a{padding:10px 12px;font-size:14px;font-weight:600;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs a.on{color:var(--ink);border-bottom-color:var(--accent)}
+.preview{max-width:100%;max-height:260px;border-radius:10px;border:1px solid var(--line);margin-top:10px;display:block}
 @media (max-width:560px){.kv{grid-template-columns:1fr}.kv dt{margin-top:6px}.grid2{grid-template-columns:1fr}h1{font-size:21px}.status-dots .dot span{display:none}}
 </style>
 </head>
@@ -88,6 +92,7 @@ details summary{cursor:pointer;font-weight:600}
     <a class="brand" href="#/"><span class="logo">CP</span>ClaimPilot AI</a>
     <div class="status-dots" id="dots"></div>
   </div>
+  <nav class="tabs"><a href="#/" id="tabD">Dispute defense</a><a href="#/shipments" id="tabS">Shipment proof</a></nav>
 </div></header>
 <div class="wrap" id="bannerWrap"></div>
 <main class="wrap" id="app"><div class="empty"><span class="spinner"></span>Loading…</div></main>
@@ -336,10 +341,108 @@ async function sandbox(kind, outcome){
   }catch(e){ $("#sbMsg").innerHTML = `<span style="color:var(--bad)">${esc(e.message)}</span>`; }
 }
 
+
+/* ---------------- Module 2: Shipment proof ---------------- */
+let SHIP = {text:"", img:null, mime:null, data:null};
+function downscale(file){
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => { const im = new Image(); im.onload = () => {
+        const s = Math.min(1, 1600 / Math.max(im.width, im.height));
+        const c = document.createElement("canvas"); c.width = Math.round(im.width*s); c.height = Math.round(im.height*s);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/jpeg", 0.85)); };
+      im.onerror = reject; im.src = fr.result; };
+    fr.onerror = reject; fr.readAsDataURL(file);
+  });
+}
+async function renderShipments(){
+  SHIP = {text:"", img:null, mime:null, data:null};
+  $("#app").innerHTML = `
+  <h1>Shipment proof</h1>
+  <p class="sub">Most "item not received" cases are lost for lack of proof. Read the label once, confirm it, and attach the tracking to the PayPal transaction before a dispute starts. It also feeds straight into dispute evidence.</p>
+  <section class="card"><h2><span class="step">1</span>Shipping label</h2>
+    <label>Paste the label or shipping confirmation text</label>
+    <textarea id="s_text" placeholder="e.g. FedEx Ground · Tracking 7946 1234 5678 · Ship date 2026-11-04"></textarea>
+    <label>…or take/upload a photo of the label</label>
+    <input type="file" id="s_file" accept="image/*" capture="environment">
+    <div id="s_prev"></div>
+    <div class="actions"><button class="primary" id="s_extract">Read label with AI</button></div>
+  </section>
+  <section class="card"><h2><span class="step">2</span>Check what was read</h2><div id="s_fields"><p class="small muted">Nothing read yet.</p></div></section>
+  <section class="card"><h2><span class="step">3</span>Attach to PayPal</h2><div id="s_attach"><p class="small muted">Confirm the fields first.</p></div></section>
+  <section class="card"><h2>Attached shipments</h2><div id="s_hist" class="small muted">Loading…</div></section>`;
+  $("#s_file").onchange = async e => {
+    const f = e.target.files[0]; if(!f) return;
+    const url = await downscale(f); SHIP.img = url.split(",")[1]; SHIP.mime = "image/jpeg";
+    $("#s_prev").innerHTML = `<img class="preview" src="${url}" alt="Label photo preview">`;
+  };
+  $("#s_extract").onclick = extractLabel;
+  loadShipHistory();
+}
+async function extractLabel(){
+  SHIP.text = $("#s_text").value;
+  const btn = $("#s_extract"); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Reading…';
+  try{
+    SHIP.data = await api("/api/shipments/extract", {method:"POST", body: JSON.stringify({text:SHIP.text, image_base64:SHIP.img || "", mime:SHIP.mime || ""})});
+    showFields(); await showAttach();
+  }catch(e){ $("#s_fields").innerHTML = `<div class="result bad">${esc(e.message)}</div>`; }
+  btn.disabled = false; btn.textContent = "Read label with AI";
+}
+function showFields(){
+  const d = SHIP.data;
+  $("#s_fields").innerHTML = `
+    <div class="chips" style="margin-bottom:8px"><span class="chip ${d.engine==="AI"?"accent":"warn"}">${d.engine==="AI" ? "Gemini · "+esc(d.model||"") : "Rule-based"}</span><span class="chip">Confidence: ${esc(d.confidence||"—")}</span></div>
+    ${d.ai_error ? `<p class="small muted">${esc(d.ai_error)}</p>` : ""}
+    <div class="grid2">
+      <div><label>Carrier</label><input id="s_carrier" value="${esc(d.carrier)}"></div>
+      <div><label>Tracking number</label><input id="s_tn" class="mono" value="${esc(d.tracking_number)}"></div>
+      <div><label>Ship date</label><input id="s_date" type="date" value="${esc(d.ship_date)}"></div>
+      <div><label>Status</label><select id="s_status">${["Shipped","Delivered"].map(x => `<option ${String(d.delivery_status||"").toLowerCase()===x.toLowerCase()?"selected":""}>${x}</option>`).join("")}</select></div>
+    </div>
+    <div style="margin-top:10px">${(d.checks||[]).map(c => `<div class="small">${c.ok===true?"✅":c.ok===false?"❌":"👀"} ${esc(c.check)}</div>`).join("")}</div>`;
+}
+async function showAttach(){
+  let txs = [];
+  try{ txs = (await api("/api/shipments/transactions")).items; }catch{}
+  $("#s_attach").innerHTML = `
+    <label>PayPal transaction</label>
+    <select id="s_tx">${txs.map(t => `<option value="${esc(t.transaction_id)}" data-dispute="${esc(t.dispute_id)}">${esc(t.transaction_id)} · ${money(t.amount)} · dispute ${esc(t.dispute_id)}</option>`).join("")}<option value="__manual">Enter a transaction ID…</option></select>
+    <input id="s_txm" class="mono" placeholder="Seller transaction ID from your PayPal activity" style="margin-top:8px;display:${txs.length?"none":"block"}">
+    <label class="check"><input type="checkbox" id="s_link" checked> Also save as evidence for the linked dispute</label>
+    <div class="grid2"><div><label>Approved by</label><input id="s_appr" placeholder="Your name"></div></div>
+    <label class="check"><input type="checkbox" id="s_conf"> I checked these fields against the actual label.</label>
+    <div class="actions"><button class="primary" id="s_go">Attach tracking to PayPal</button></div><div id="s_res"></div>`;
+  if(!txs.length) $("#s_tx").value = "__manual";
+  $("#s_tx").onchange = () => { $("#s_txm").style.display = $("#s_tx").value === "__manual" ? "block" : "none"; };
+  $("#s_go").onclick = attachShipment;
+}
+async function attachShipment(){
+  const sel = $("#s_tx"), manual = sel.value === "__manual";
+  const opt = sel.options[sel.selectedIndex];
+  const body = {transaction_id: manual ? $("#s_txm").value : sel.value, carrier:$("#s_carrier").value, tracking_number:$("#s_tn").value,
+    ship_date:$("#s_date").value, delivery_status:$("#s_status").value, dispute_id: (!manual && $("#s_link").checked) ? opt.dataset.dispute : "",
+    source_text: SHIP.img ? "" : SHIP.text, approver:$("#s_appr").value, confirm:$("#s_conf").checked};
+  const btn = $("#s_go"); btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Attaching…';
+  try{
+    const r = await api("/api/shipments/attach", {method:"POST", body: JSON.stringify(body)});
+    $("#s_res").innerHTML = `<div class="result ok"><b>Tracking attached to PayPal transaction ${esc(r.transaction_id)}.</b><br><span class="small">${esc(r.carrier)} · <span class="mono">${esc(r.tracking_number)}</span> · ${esc(r.status)}${r.dispute_id ? ` · saved as evidence for <a href="#/case/${encodeURIComponent(r.dispute_id)}">${esc(r.dispute_id)}</a>` : ""}</span></div>`;
+    loadShipHistory();
+  }catch(e){ $("#s_res").innerHTML = `<div class="result bad">${esc(e.message)}</div>`; }
+  btn.disabled = false; btn.textContent = "Attach tracking to PayPal";
+}
+async function loadShipHistory(){
+  try{ const r = await api("/api/shipments");
+    $("#s_hist").innerHTML = r.items.length ? `<ul class="audit" style="padding-left:18px;margin:0">${r.items.map(s => `<li><b class="mono">${esc(s.tracking_number)}</b> · ${esc(s.carrier)} → ${esc(s.transaction_id)} · ${esc(s.approver)} · ${esc(fmtDate(s.at))}</li>`).join("")}</ul>` : "None yet.";
+  }catch(e){ $("#s_hist").textContent = e.message; }
+}
+
 function route(){
   const h = location.hash || "#/";
   const m = h.match(/^#\/case\/(.+)$/);
-  if(m) renderCase(decodeURIComponent(m[1])); else renderList();
+  const ship = h.startsWith("#/shipments");
+  $("#tabS").classList.toggle("on", ship); $("#tabD").classList.toggle("on", !ship);
+  if(m) renderCase(decodeURIComponent(m[1])); else if(ship) renderShipments(); else renderList();
   window.scrollTo(0,0);
 }
 window.addEventListener("hashchange", route);

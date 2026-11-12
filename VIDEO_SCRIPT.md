@@ -11,8 +11,9 @@ Record the phone screen with the built-in screen recorder, then trim it in CapCu
 | 1:15–1:45 | Section 3: Analyze with AI | "Gemini reads the dispute and my record. It summarises the case, maps each requested evidence type to what I actually have, recommends an action, flags risks, and lists every fact it used with its source." |
 | 1:45–2:05 | Section 4: show the payload, type a fake number into the note, press submit to show the block, then fix it | "Guardrails are in code, not just the prompt. Tracking data is copied only from my record. If the note contains an ID that isn't in PayPal's data or mine — like this one — submission is blocked." |
 | 2:05–2:25 | Enter name, tick confirm, submit, show the success panel | "Nothing goes to PayPal until a human approves. I approve, and the backend calls provide-evidence on the Disputes API, attaches tracking to the transaction, and re-reads the case. PayPal's status updates right here. A double-tap can't submit twice." |
-| 2:25–2:35 | Sandbox controls: settle, then the audit trail | "In sandbox I can simulate PayPal's review to show the full lifecycle, and every step is in the audit trail." |
-| 2:35–2:45 | Back to the queue | "ClaimPilot AI: PayPal Disputes API plus AI, with a human in control. Built solo, entirely from an Android phone." |
+| 2:25–2:35 | *(Optional, if Shipment proof is in the build)* Shipment proof tab: paste a label, Read label with AI, Attach | "Better still, prevent the dispute: ClaimPilot reads a shipping label, I confirm it, and the tracking is attached to the PayPal transaction." |
+| 2:35–2:42 | Sandbox controls: settle, then the audit trail | "In sandbox I can simulate PayPal's review to show the full lifecycle, and every step is in the audit trail." |
+| 2:42–2:50 | Back to the queue | "ClaimPilot AI: PayPal Disputes API plus AI, with a human in control. Built solo, entirely from an Android phone." |
 
 **Checklist before upload**
 - Say "PayPal" and "AI / Gemini" out loud.

@@ -157,14 +157,15 @@ async def adjudicate(dispute_id: str, outcome: str) -> dict:
                           json_body={"adjudication_outcome": outcome}, request_id=str(uuid.uuid4()))
 
 
-async def add_tracking(transaction_id: str, tracking_number: str, carrier: str) -> dict:
-    """Add Tracking API: attach the shipment to the PayPal transaction (best effort)."""
+async def add_tracking(transaction_id: str, tracking_number: str, carrier: str,
+                       status: str = "SHIPPED") -> dict:
+    """Add Tracking API: attach the shipment to the PayPal transaction."""
     if is_mock():
         return {"tracker_identifiers": [{"transaction_id": transaction_id, "tracking_number": tracking_number}]}
     tracker: dict[str, Any] = {
         "transaction_id": transaction_id,
         "tracking_number": tracking_number,
-        "status": "SHIPPED",
+        "status": status if status in ("SHIPPED", "DELIVERED", "ON_HOLD") else "SHIPPED",
     }
     if carrier and carrier.upper().replace(" ", "_") in KNOWN_CARRIERS:
         tracker["carrier"] = carrier.upper().replace(" ", "_")

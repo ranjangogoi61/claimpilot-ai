@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from . import ai, paypal, store
+from . import ai, paypal, shipments, store
 
 app = FastAPI(title="ClaimPilot AI", version="1.0.0")
 STATIC = Path(__file__).resolve().parent.parent / "static"
@@ -219,3 +219,83 @@ async def sandbox_adjudicate(dispute_id: str, body: AdjudicateBody):
 @app.get("/api/audit")
 async def audit_all():
     return {"items": store.audit_for(None, 200)}
+
+
+# ---------------- Module 2: Shipment Proof ----------------
+
+class ExtractBody(BaseModel):
+    text: str = ""
+    image_base64: str = ""
+    mime: str = ""
+
+
+@app.post("/api/shipments/extract")
+async def shipments_extract(body: ExtractBody):
+    if not body.text.strip() and not body.image_base64:
+        raise HTTPException(400, "Paste the label text or attach a photo.")
+    if len(body.image_base64) > 7_000_000:
+        raise HTTPException(400, "Photo too large; use one under ~5 MB.")
+    return await shipments.extract(body.text.strip() or None, body.image_base64 or None, body.mime or None)
+
+
+@app.get("/api/shipments/transactions")
+async def shipments_transactions():
+    """PayPal transactions we can attach tracking to: the ones behind current disputes."""
+    items = await paypal.list_disputes()
+    details = await asyncio.gather(*[paypal.get_dispute(i["dispute_id"]) for i in items[:15]],
+                                   return_exceptions=True)
+    out = []
+    for d in details:
+        if not isinstance(d, dict):
+            continue
+        tx = (d.get("disputed_transactions") or [{}])[0]
+        if tx.get("seller_transaction_id"):
+            out.append({"transaction_id": tx["seller_transaction_id"], "dispute_id": d.get("dispute_id"),
+                        "amount": tx.get("gross_amount") or d.get("dispute_amount"), "status": d.get("status")})
+    return {"items": out}
+
+
+class AttachBody(BaseModel):
+    transaction_id: str
+    carrier: str
+    tracking_number: str
+    ship_date: str = ""
+    delivery_status: str = ""
+    dispute_id: str = ""
+    source_text: str = ""
+    approver: str = ""
+    confirm: bool = False
+
+
+@app.post("/api/shipments/attach")
+async def shipments_attach(body: AttachBody):
+    if not body.confirm or not body.approver.strip():
+        raise HTTPException(400, "Approval required: enter your name and confirm the fields match the label.")
+    tn = body.tracking_number.strip()
+    if not tn or not body.transaction_id.strip():
+        raise HTTPException(400, "Transaction ID and tracking number are required.")
+    if body.source_text and shipments._norm(tn) not in shipments._norm(body.source_text):
+        raise HTTPException(400, "Blocked: this tracking number does not appear in the label text you provided.")
+    status = "DELIVERED" if body.delivery_status.lower() == "delivered" else "SHIPPED"
+    resp = await paypal.add_tracking(body.transaction_id.strip(), tn, body.carrier.strip(), status)
+    entry = {"transaction_id": body.transaction_id.strip(), "carrier": body.carrier.strip(),
+             "tracking_number": tn, "ship_date": body.ship_date, "status": status,
+             "approver": body.approver.strip(), "at": store.now(), "paypal_response": resp,
+             "dispute_id": body.dispute_id or None}
+    hist = store.get("shipments", "all", [])
+    hist.insert(0, entry)
+    store.put("shipments", "all", hist[:100])
+    if body.dispute_id:
+        rec = store.get("record", body.dispute_id, {})
+        rec.update({"carrier": entry["carrier"], "tracking_number": tn, "ship_date": body.ship_date,
+                    "delivery_status": body.delivery_status or rec.get("delivery_status", "")})
+        store.put("record", body.dispute_id, rec)
+        store.audit(body.dispute_id, body.approver, "SHIPMENT_PROOF_LINKED", {"tracking_number": tn})
+    store.audit(body.dispute_id or "-", body.approver, "TRACKING_ATTACHED",
+                {"transaction_id": entry["transaction_id"], "tracking_number": tn})
+    return entry
+
+
+@app.get("/api/shipments")
+async def shipments_list():
+    return {"items": store.get("shipments", "all", [])}

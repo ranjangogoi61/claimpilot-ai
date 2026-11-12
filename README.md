@@ -13,7 +13,12 @@ PayPal's own Agent Toolkit lets an AI agent **list, read and accept** disputes, 
 
 ClaimPilot fills that gap, safely.
 
-## What it does
+ClaimPilot is a **Merchant Protection Hub** with two working modules:
+
+- **Dispute defense:** answer PayPal disputes with AI-mapped, human-approved evidence.
+- **Shipment proof:** turn a shipping label into verified tracking on the PayPal transaction, which prevents disputes and feeds evidence into them.
+
+## Module 1: Dispute defense
 
 1. **Dispute queue.** Lists your PayPal disputes, putting cases that need your response first, then ordering by `seller_response_due_date`.
 2. **Case page.**
@@ -31,6 +36,15 @@ ClaimPilot fills that gap, safely.
    - It then re-reads the dispute to show PayPal's new status.
 5. **Sandbox controls.** PayPal's sandbox-only `require-evidence` and `adjudicate` endpoints show the full lifecycle. They are clearly labelled as simulation.
 6. **Audit trail.** Every record save, AI run, approval, submission and duplicate block is logged.
+
+## Module 2: Shipment proof
+
+1. Paste the label or shipping-confirmation text, or take a photo of the label with the phone camera.
+2. Gemini (multimodal) reads the carrier, tracking number, ship date and status. If the AI is off, a rule-based reader covers common formats: UPS, FedEx, USPS, DHL and India Post.
+3. The checks are deterministic:
+   - for pasted text, the tracking number must literally appear in the text;
+   - for photos, a human confirms the fields against the photo.
+4. On approval, the tracking is attached to the PayPal transaction via the **Add Tracking API**, and can be saved straight into the linked dispute's evidence record.
 
 ## Safety guarantees (enforced in code, not by the prompt)
 
@@ -50,8 +64,8 @@ ClaimPilot fills that gap, safely.
 |---|---|
 | PayPal OAuth 2.0 | Client credentials, with the token cached until near expiry |
 | PayPal Disputes API v1 | List disputes, show dispute details, provide evidence (multipart), sandbox `require-evidence` and `adjudicate` |
-| PayPal Add Tracking API | `POST /v1/shipping/trackers-batch` (optional, non-blocking) |
-| AI | Google Gemini (`gemini-flash-latest` by default) in JSON mode, behind deterministic guardrails |
+| PayPal Add Tracking API | `POST /v1/shipping/trackers-batch` (Shipment proof module, plus optional during dispute submission) |
+| AI | Google Gemini (`gemini-flash-latest` by default) in JSON mode for dispute analysis and multimodal label reading, behind deterministic guardrails |
 
 **Built with:** Python, FastAPI, httpx, SQLite, vanilla HTML/JS, PayPal REST APIs (sandbox), Google Gemini API, Render.
 
@@ -102,10 +116,19 @@ These steps follow PayPal's documented sandbox test flow.
 app/main.py         FastAPI routes, approval gate, idempotency
 app/paypal.py       PayPal REST client (OAuth, Disputes, Add Tracking)
 app/ai.py           Gemini analysis + deterministic guardrails + rule-based fallback
+app/shipments.py    Label reading (Gemini multimodal / rules) for Shipment proof
 app/store.py        SQLite: records, analyses, submissions, audit log
 app/mock_paypal.py  Offline mock (MOCK_PAYPAL=1 only)
-static/index.html   Two-screen mobile-first UI
+static/index.html   Mobile-first UI: dispute queue, case page, shipment proof
 ```
+
+## Roadmap (not built yet)
+
+These are researched next modules. They are **not** in the app.
+
+- **Agent Permission Firewall:** spending limits, allow-lists and approval queues for AI agents that call PayPal tools. It is motivated by open issues on PayPal's agent-toolkit repo.
+- **Refund Guard:** policy-checked refunds with duplicate-refund protection.
+- **Payment State Reconciler:** a webhook inbox, de-duplication and order/capture/refund timeline.
 
 ## Limits (honest)
 
